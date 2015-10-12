@@ -1,2 +1,2 @@
-# scrappy
-Playing around with web scraping
+# Ananzi
+Crawling and comprehending Wikipedia
