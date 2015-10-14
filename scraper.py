@@ -18,7 +18,14 @@ def save_html(html, filename):
 @asyncio.coroutine
 def get_page(url):
     resp = yield from aiohttp.get(url)
-    html = yield from resp.read_and_close()
+    if resp.status == 200:
+        html = yield from resp.read_and_close()
+    elif resp.status == 404:
+        raise aoihttp.web.HTTPNotFound
+    else:
+        raise aiohttp.HttpProcessingError(
+            code=resp.status, message=resp.reason,
+            headers=resp.headers)
     return html
         
 @asyncio.coroutine
@@ -28,13 +35,14 @@ def download_page(title):
     save_html(html, title.lower() + '.html')
     return title
 
+
 # asyncio driver 
 def crawl(topics):
     loop = asyncio.get_event_loop()
     schedule = [download_page(t) for t in topics]
     garcon = asyncio.wait(schedule)
     res, _ = loop.run_until_complete(garcon)
-    loop.close()
+#    loop.close()
     return res
 
 
