@@ -1,5 +1,6 @@
 import os.path
 import json
+from datetime import datetime
 
 from bs4 import BeautifulSoup
 import asyncio, aiohttp
@@ -21,11 +22,13 @@ topics = [
 SAVE_DIR = 'tmp/'
 
 # Saves html to file
-def save_json(obj, filename):
+def save_doc(doc):
+    now = datetime.now()
+    filename = "{}-{}-{}-{}:{}:{}.{}.json".format(now.year,now.month,now.day,now.hour,now.minute,now.second,doc['title']) 
     path = os.path.join(SAVE_DIR, filename)
 #    print("Saving to "+path)
     with open(path, 'wt') as fp:
-        json.dump(obj,fp)
+        json.dump(doc,fp)
 
 # parse html and build save document
 def parse(html):
@@ -62,7 +65,7 @@ def download_page(semaphore, title):
             html = yield from get_page(WP_DOMAIN + title)
         print('Completed download of: ' + title)
         document = parse(html)
-        save_json(document, title.lower() + '.json')
+        save_doc(document)
     except web.HTTPNotFound as e:
         print('Topic not found at Wikipedia: ' + title)
     except Exception as e:
