@@ -37,10 +37,10 @@ def parse(html):
     return doc
 
 @asyncio.coroutine
-def get_page(session, url):
+def get_page(url):
     html = None
     err = None
-    resp = yield from session.get(url)
+    resp = yield from aiohttp.get(url)
     if resp.status == 200:
         html = yield from resp.read()
     else:
@@ -56,9 +56,10 @@ def get_page(session, url):
     return html
     
 @asyncio.coroutine
-def download_page(session, title):
+def download_page(semaphore, title):
     try:
-        html = yield from get_page(session, WP_DOMAIN + title)
+        with (yield from semaphore):#Limits number of concurrent requests
+            html = yield from get_page(WP_DOMAIN + title)
         print('Completed download of: ' + title)
         document = parse(html)
         save_json(document, title.lower() + '.json')
@@ -71,17 +72,16 @@ def download_page(session, title):
 
 
 # asyncio driver 
-def crawl(topics):
+def crawl(topics, max_concur):
     loop = asyncio.get_event_loop()
     loop.set_debug(True)
-    session = aiohttp.ClientSession(connector=aiohttp.TCPConnector(limit=100))
-    schedule = [download_page(session,t) for t in topics]
+    semaphore = asyncio.Semaphore(max_concur)#For preventing accidental DOS
+    schedule = [download_page(semaphore,t) for t in topics]
     garcon = asyncio.wait(schedule)
     res, _ = loop.run_until_complete(garcon)
-    session.close()
     loop.close()
     return len(res)
 
 
 if __name__ == '__main__':
-    crawl(topics)
+    crawl(topics,max_concur=30)
