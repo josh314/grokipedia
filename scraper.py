@@ -31,7 +31,7 @@ def parse(html):
 def get_page(url):
     resp = yield from aiohttp.get(url)
     if resp.status == 200:
-        html = yield from resp.read_and_close()
+        html = yield from resp.text()
         return html
     else:
         resp.close()
@@ -52,16 +52,20 @@ def download_page(title):
         save_json(document, title.lower() + '.json')
     except web.HTTPNotFound as e:
         print('Topic not found at Wikipedia:' + title)
+    except Error as e:
+        print('Error:')
+        print(e)
     return title
 
 
 # asyncio driver 
 def crawl(topics):
     loop = asyncio.get_event_loop()
+    loop.set_debug(True)
     schedule = [download_page(t) for t in topics]
     garcon = asyncio.wait(schedule)
     res, _ = loop.run_until_complete(garcon)
-#    loop.close()
+    loop.close()
     return res
 
 
