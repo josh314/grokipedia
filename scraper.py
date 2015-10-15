@@ -5,16 +5,25 @@ from bs4 import BeautifulSoup
 import asyncio, aiohttp
 from aiohttp import web
 
+import logging
+#logging.basicConfig(level=logging.DEBUG)
+
 WP_DOMAIN = "http://en.wikipedia.org/wiki/"
 
-topics = ['Mathematics', 'Barack_Obama', 'Daredevil', 'Monsieur_Farty_Pants', 'fhgjfds']
+topics = [
+    'Mathematics',
+    'Barack_Obama',
+    'Daredevil',
+    'Monsieur_Farty_Pants',
+    'fhgjfds',
+]
 
 SAVE_DIR = 'tmp/'
 
 # Saves html to file
 def save_json(obj, filename):
     path = os.path.join(SAVE_DIR, filename)
-    print("Saving to "+path)
+#    print("Saving to "+path)
     with open(path, 'wt') as fp:
         json.dump(obj,fp)
 
@@ -28,31 +37,34 @@ def parse(html):
     return doc
 
 @asyncio.coroutine
-def get_page(url):
-    resp = yield from aiohttp.get(url)
+def get_page(session, url):
+    html = None
+    err = None
+    resp = yield from session.get(url)
     if resp.status == 200:
-        html = yield from resp.text()
-        return html
+        html = yield from resp.read()
     else:
-        resp.close()
         if resp.status == 404:
-            raise web.HTTPNotFound
+            err = web.HTTPNotFound
         else:
-            raise aiohttp.HttpProcessingError(
+            err = aiohttp.HttpProcessingError(
                 code=resp.status, message=resp.reason,
                 headers=resp.headers)
-
-        
+    resp.close()
+    if(err):
+        raise err
+    return html
+    
 @asyncio.coroutine
-def download_page(title):
+def download_page(session, title):
     try:
-        html = yield from get_page(WP_DOMAIN + title)
+        html = yield from get_page(session, WP_DOMAIN + title)
         print('Completed download of: ' + title)
         document = parse(html)
         save_json(document, title.lower() + '.json')
     except web.HTTPNotFound as e:
-        print('Topic not found at Wikipedia:' + title)
-    except Error as e:
+        print('Topic not found at Wikipedia: ' + title)
+    except Exception as e:
         print('Error:')
         print(e)
     return title
@@ -62,11 +74,13 @@ def download_page(title):
 def crawl(topics):
     loop = asyncio.get_event_loop()
     loop.set_debug(True)
-    schedule = [download_page(t) for t in topics]
+    session = aiohttp.ClientSession(connector=aiohttp.TCPConnector(limit=100))
+    schedule = [download_page(session,t) for t in topics]
     garcon = asyncio.wait(schedule)
     res, _ = loop.run_until_complete(garcon)
+    session.close()
     loop.close()
-    return res
+    return len(res)
 
 
 if __name__ == '__main__':
