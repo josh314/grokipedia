@@ -22,9 +22,9 @@ topics = [
 SAVE_DIR = 'tmp/'
 
 # Saves html to file
-def save_doc(doc):
+def save_doc(doc,title):
     now = datetime.now()
-    filename = "{}-{}-{}-{}:{}:{}.{}.json".format(now.year,now.month,now.day,now.hour,now.minute,now.second,doc['title']) 
+    filename = "{}-{}-{}-{}:{}:{}.{}.json".format(now.year,now.month,now.day,now.hour,now.minute,now.second,title) 
     path = os.path.join(SAVE_DIR, filename)
 #    print("Saving to "+path)
     with open(path, 'wt') as fp:
@@ -37,6 +37,12 @@ def parse(html):
     doc['title'] = page.find(id='firstHeading').get_text()
     doc['categories'] = [ li.a['href'].split('/')[2] for li in page.find(id='mw-normal-catlinks').find_all('li') ]
     doc['content'] = page.find(id='mw-content-text').get_text()
+    links = page.find(id='mw-content-text').find_all('a')
+    def filter_links(links):
+        for link in links:
+            if link['href'].startswith('/wiki/') and 'class' not in link.attrs:
+                yield link['href'].split('/')[-1]
+    doc['wikilinks'] = [link for link in filter_links(links)]
     return doc
 
 @asyncio.coroutine
@@ -65,7 +71,7 @@ def download_page(semaphore, title):
             html = yield from get_page(WP_DOMAIN + title)
         print('Completed download of: ' + title)
         document = parse(html)
-        save_doc(document)
+        save_doc(document, title)
     except web.HTTPNotFound as e:
         print('Topic not found at Wikipedia: ' + title)
     except Exception as e:
