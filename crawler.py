@@ -7,7 +7,7 @@ class Crawler(object):
     def __init__(self, loop, scraper, max_conn=30):
         self.loop = loop
         self.scraper = scraper
-        self.semaphore = asyncio.Semaphore(max_conn)#For preventing accidental DOS
+        self.sem = asyncio.Semaphore(max_conn)#For preventing accidental DOS
 
     @asyncio.coroutine
     def get_page(self,url):
@@ -31,7 +31,7 @@ class Crawler(object):
     @asyncio.coroutine
     def download_page(self, url):
         try:
-            with (yield from self.semaphore):#Limits number of concurrent requests
+            with (yield from self.sem):#Limits number of concurrent requests
                 html = yield from self.get_page(url)
         except web.HTTPNotFound as e:
             print('Resource not found: ' + url)
