@@ -1,44 +1,13 @@
 import os.path
 import json
 from datetime import datetime
+import asyncio
 
-from bs4 import BeautifulSoup
-import asyncio, aiohttp
+import aiohttp
 from aiohttp import web
 
-import logging
-#logging.basicConfig(level=logging.DEBUG)
-
 WP_DOMAIN = "http://en.wikipedia.org/wiki/"
-
-topics = [
-    'Mathematics',
-    'Barack_Obama',
-    'Daredevil',
-    'Monsieur_Farty_Pants',
-    'fhgjfds',
-]
-
 SAVE_DIR = 'tmp/'
-
-class WikiParser(object):
-    def __init__(self):
-        pass
-
-    def parse(self,html):
-        doc = {}
-        page = BeautifulSoup(html)
-        doc['title'] = page.find(id='firstHeading').get_text()
-        doc['categories'] = [ li.a['href'].split('/')[2] for li in page.find(id='mw-normal-catlinks').find_all('li') ]
-        doc['content'] = page.find(id='mw-content-text').get_text()
-        links = page.find(id='mw-content-text').find_all('a')
-        def filter_links(links):
-            for link in links:
-                if link['href'].startswith('/wiki/') and 'class' not in link.attrs:
-                    yield link['href'].split('/')[-1]
-        doc['wikilinks'] = [link for link in filter_links(links)]
-        page.decompose()
-        return doc
 
 class Scraper(object): 
     def __init__(self, loop, parser, max_conn=30):
@@ -102,9 +71,4 @@ class Scraper(object):
         return len(res)
 
 
-if __name__ == '__main__':
-    loop = asyncio.get_event_loop()
-#    loop.set_debug(True)
-    ananzi = Scraper(loop, WikiParser())
-    ananzi.crawl(topics)
-    loop.close()
+
