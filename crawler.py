@@ -33,12 +33,13 @@ class Crawler(object):
         try:
             with (yield from self.semaphore):#Limits number of concurrent requests
                 html = yield from self.get_page(url)
-                self.scraper.process(html)
         except web.HTTPNotFound as e:
             print('Resource not found: ' + url)
         except Exception as e:
             print('Error:')
             print(e)
+        else:
+             self.scraper.process(html)
         return url
 
 
