@@ -3,23 +3,19 @@ import logging
 import aiohttp
 
 from crawler import Crawler
-from dummy import Scraper
+from dummy import DummyScraper
 #logging.basicConfig(level=logging.DEBUG)
 
-WP_DOMAIN = "http://en.wikipedia.org/wiki/"
-
-topics = [
-    'Mathematics',
-    'Barack_Obama',
-    'Daredevil',
-    'Monsieur_Farty_Pants',
-    'fhgjfds',
+urls = [
+    'http://www.google.com',
+    'http://www.wikipedia.org/wiki/Barack_Obama',
+    'http://reddit.com',
+    'http://fhqwhgads.com/',
 ]
-urls = [WP_DOMAIN + t for t in topics]
 
 loop = asyncio.get_event_loop()
 #loop.set_debug(True)
 
-ananzi = Scraper(loop, Scraper())
+ananzi = Crawler(loop, DummyScraper())
 ananzi.crawl(urls)
 loop.close()
