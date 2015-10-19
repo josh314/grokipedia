@@ -1,18 +1,13 @@
-import os.path
-import json
-from datetime import datetime
 import asyncio
 
 import aiohttp
 from aiohttp import web
 
-
-
 class Crawler(object): 
     def __init__(self, loop, scraper, max_conn=30):
         self.loop = loop
-        self.semaphore = asyncio.Semaphore(max_conn)#For preventing accidental DOS
         self.scraper = scraper
+        self.semaphore = asyncio.Semaphore(max_conn)#For preventing accidental DOS
 
     @asyncio.coroutine
     def get_page(self,url):
