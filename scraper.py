@@ -21,22 +21,10 @@ topics = [
 
 SAVE_DIR = 'tmp/'
 
-class Scraper: 
-    def __init__(self,loop,max_conn=30):
-        self.loop = loop
-        self.semaphore = asyncio.Semaphore(max_conn)#For preventing accidental DOS
+class WikiParser(object):
+    def __init__(self):
+        pass
 
-
-    # Saves html to file
-    def save_doc(self,doc,title):
-        now = datetime.now()
-        filename = "{}-{}-{}-{}:{}:{}.{}.json".format(now.year,now.month,now.day,now.hour,now.minute,now.second,title) 
-        path = os.path.join(SAVE_DIR, filename)
-    #    print("Saving to "+path)
-        with open(path, 'wt') as fp:
-            json.dump(doc,fp)
-            
-    # parse html and build save document
     def parse(self,html):
         doc = {}
         page = BeautifulSoup(html)
@@ -49,7 +37,27 @@ class Scraper:
                 if link['href'].startswith('/wiki/') and 'class' not in link.attrs:
                     yield link['href'].split('/')[-1]
         doc['wikilinks'] = [link for link in filter_links(links)]
+        page.decompose()
         return doc
+
+class Scraper(object): 
+    def __init__(self, loop, parser, max_conn=30):
+        self.loop = loop
+        self.semaphore = asyncio.Semaphore(max_conn)#For preventing accidental DOS
+        self.parser = parser
+
+    # Saves html to file
+    def save_doc(self,doc,title):
+        now = datetime.now()
+        filename = "{}-{}-{}-{}:{}:{}.{}.json".format(now.year,now.month,now.day,now.hour,now.minute,now.second,title) 
+        path = os.path.join(SAVE_DIR, filename)
+    #    print("Saving to "+path)
+        with open(path, 'wt') as fp:
+            json.dump(doc,fp)
+            
+    # parse html and build save document
+    def parse(self,html):
+        return self.parser.parse(html)
                 
     @asyncio.coroutine
     def get_page(self,url):
@@ -96,7 +104,7 @@ class Scraper:
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
-    loop.set_debug(True)
-    ananzi = Scraper(loop,30)
+#    loop.set_debug(True)
+    ananzi = Scraper(loop, WikiParser())
     ananzi.crawl(topics)
     loop.close()
