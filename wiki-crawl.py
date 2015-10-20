@@ -20,5 +20,5 @@ urls = ["http://www.wikipedia.org/wiki/" + t for t in topics]
 loop = asyncio.get_event_loop()
 #loop.set_debug(True)
 ananzi = Crawler(loop, WikiScraper())
-ananzi.crawl(urls)
+ananzi.launch(urls)
 loop.close()

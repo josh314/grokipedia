@@ -8,9 +8,22 @@ class Crawler(object):
         self.loop = loop
         self.scraper = scraper
         self.sem = asyncio.Semaphore(max_conn)#For preventing accidental DOS
+        self.queued = set()
+        self.processing = set()
+        self.done = set()
+        self.failed = set()
 
+    def seen(self, url):
+        return (url in self.queued or url in self.processing or url in self.done)  
+        
+    def queue(self, url):
+        if not self.seen(url):
+            self.queued.add(url)
+            task = asyncio.Task(self.process_page(url))
+        
+        
     @asyncio.coroutine
-    def get_page(self,url):
+    def get_html(self,url):
         html = None
         err = None
         resp = yield from aiohttp.get(url)
@@ -29,26 +42,33 @@ class Crawler(object):
         return html
 
     @asyncio.coroutine
-    def download_page(self, url):
+    def process_page(self, url):
+        res = {}
+        self.queued.remove(url)
+        self.processing.add(url)
         try:
             with (yield from self.sem):#Limits number of concurrent requests
-                html = yield from self.get_page(url)
+                html = yield from self.get_html(url)
         except web.HTTPNotFound as e:
             print('Resource not found: ' + url)
-        except Exception as e:
-            print('Error:')
-            print(e)
+            self.failed.add(url)
         else:
-             self.scraper.process(html)
-        return url
+             res = self.scraper.process(html)
+             self.done.add(url)
+             #TODO: Update queue based on scraping results (i.e. add outgoing links) 
+        finally:
+            self.processing.remove(url)
 
+        return res
 
-    # asyncio driver 
-    def crawl(self, urls):
-        schedule = [self.download_page(url) for url in urls]
-        garcon = asyncio.wait(schedule)
-        res, _ = self.loop.run_until_complete(garcon)
-        return len(res)
-
-
-
+    @asyncio.coroutine
+    def crawl(self):
+        while self.queued or self.processing:
+            yield from asyncio.sleep(.1)
+        print(self.failed)
+        
+    def launch(self, urls):
+        for url in urls:
+            self.queue(url)
+        task = asyncio.Task(self.crawl())
+        self.loop.run_until_complete(task)
