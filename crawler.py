@@ -64,7 +64,7 @@ class Crawler(object):
     @asyncio.coroutine
     def crawl(self):
         while self.queued or self.processing:
-            yield from asyncio.sleep(.1)
+            yield from asyncio.sleep(1)
         print(self.failed)
         
     def launch(self, urls):
