@@ -1,8 +1,11 @@
 from datetime import datetime
 import json
 import os.path
+import urllib.parse
 
 from bs4 import BeautifulSoup
+
+WP_ARTICLE_BASE = 'http://www.wikipedia.org/wiki/'
 
 class WikiScraper(object):
     def __init__(self, save_dir='tmp/'):
@@ -16,6 +19,7 @@ class WikiScraper(object):
         doc['content'] = page.find(id='mw-content-text').get_text()
         links = page.find(id='mw-content-text').find_all('a')
         def filter_links(links):
+            #TODO: use urllib.parse for extracting topic. Also handle fragments somehow
             for link in links:
                 if link['href'].startswith('/wiki/') and 'class' not in link.attrs:
                     yield link['href'].split('/')[-1]
@@ -38,4 +42,6 @@ class WikiScraper(object):
         doc = self.parse(html)
         print("Parsed: " + doc['title'])
         self.save_doc(doc,doc['title'])
+        doc['targets'] = [urllib.parse.urljoin(WP_ARTICLE_BASE, topic) for topic in doc['wikilinks']]
+        return doc
 
