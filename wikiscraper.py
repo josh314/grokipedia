@@ -32,7 +32,7 @@ class WikiScraper(object):
     # Saves html to file
     def save_doc(self,doc,title):
         now = datetime.now()
-        filename = "{}-{}-{}-{}:{}:{}.{}.json".format(now.year,now.month,now.day,now.hour,now.minute,now.second,title) 
+        filename = "{}.{}-{}-{}-{}:{}.json".format(title,now.year,now.month,now.day,now.hour,now.minute) 
         path = os.path.join(self.save_dir, filename)
     #    print("Saving to "+path)
         with open(path, 'wt') as fp:
