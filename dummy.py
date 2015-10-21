@@ -3,5 +3,5 @@ class DummyScraper(object):
         pass
 
     def process(self, html):
-        print('Did my thing.')
+        return {}
         
