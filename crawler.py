@@ -48,7 +48,7 @@ class Crawler(object):
         try:
             with (yield from self.sem):#Limits number of concurrent requests
                 html = yield from self.get_html(url)
-        except web.HTTPNotFound as e:
+        except Exception as e:
             print('Resource not found: ' + url)
             self.failed.add(url)
         else:
