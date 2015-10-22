@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from crawler import Crawler
+from ananzi.crawler import Crawler
 from wikiscraper import WikiScraper
 #logging.basicConfig(level=logging.DEBUG)
 
@@ -19,6 +19,7 @@ urls = ["http://www.wikipedia.org/wiki/" + t for t in topics]
 
 loop = asyncio.get_event_loop()
 #loop.set_debug(True)
-ananzi = Crawler(loop, WikiScraper())
-ananzi.launch(urls)
+cr = Crawler(loop, WikiScraper(save_dir="tmp"))
+cr.launch(urls)
 loop.close()
+

@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 WP_ARTICLE_BASE = 'http://www.wikipedia.org/wiki/'
 
 class WikiScraper(object):
-    def __init__(self, save_dir='tmp/'):
+    def __init__(self, save_dir='.'):
         self.save_dir = save_dir
         
     def parse(self,html):
@@ -38,10 +38,11 @@ class WikiScraper(object):
         with open(path, 'wt') as fp:
             json.dump(doc,fp)
 
-    def process(self,html):
+    def process(self,url,html):
         doc = self.parse(html)
+        doc['url'] = url
         print("Parsed: " + doc['title'])
         self.save_doc(doc,doc['title'])
-        doc['targets'] = [urllib.parse.urljoin(WP_ARTICLE_BASE, topic) for topic in doc['wikilinks']]
-        return doc
+        wikilink_urls = [urllib.parse.urljoin(WP_ARTICLE_BASE, topic) for topic in doc['wikilinks']]
+        return (True, wikilink_urls)
 
