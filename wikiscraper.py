@@ -2,14 +2,17 @@ from datetime import datetime
 import json
 import os.path
 import urllib.parse
+import asyncio
 
 from bs4 import BeautifulSoup
+import aiofiles
 
 WP_ARTICLE_BASE = 'http://www.wikipedia.org/wiki/'
 
 class WikiScraper(object):
-    def __init__(self, save_dir='.'):
+    def __init__(self, loop, save_dir='.'):
         self.save_dir = save_dir
+        self.loop = loop
         
     def parse(self,html):
         doc = {}
@@ -30,19 +33,22 @@ class WikiScraper(object):
 #TODO: remove links internal to a page (i.e. ugly # url fragments) 
 
     # Saves html to file
+    @asyncio.coroutine
     def save_doc(self,doc,title):
         now = datetime.now()
         filename = "{}.{}-{}-{}-{}:{}.json".format(title,now.year,now.month,now.day,now.hour,now.minute) 
         path = os.path.join(self.save_dir, filename)
-    #    print("Saving to "+path)
-        with open(path, 'wt') as fp:
-            json.dump(doc,fp)
-
+        f = yield from aiofiles.open(path, 'wt')
+        try:
+            yield from f.write(json.dumps(doc))
+        finally:
+            yield from f.close()
+            
     def process(self,url,html):
         doc = self.parse(html)
         doc['url'] = url
         print("Parsed: " + doc['title'])
-        self.save_doc(doc,doc['title'])
+        asyncio.Task(self.save_doc(doc,doc['title']))
         wikilink_urls = [urllib.parse.urljoin(WP_ARTICLE_BASE, topic) for topic in doc['wikilinks']]
         return (True, wikilink_urls)
 
