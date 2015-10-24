@@ -1,7 +1,7 @@
 from datetime import datetime
 import json
 import os.path
-import urllib.parse
+import unicodedata
 import asyncio
 
 from bs4 import BeautifulSoup
@@ -9,11 +9,14 @@ import aiofiles
 
 WP_ARTICLE_BASE = 'http://www.wikipedia.org/wiki/'
 
+def normalize(string):#Remove diacritics and whatevs
+    return "".join(ch.lower() for ch in unicodedata.normalize('NFD', string) if not unicodedata.combining(ch))
+
 class WikiScraper(object):
     def __init__(self, loop, save_dir='.'):
         self.save_dir = save_dir
         self.loop = loop
-        
+
     def parse(self,html):
         doc = {}
         page = BeautifulSoup(html)
@@ -30,15 +33,16 @@ class WikiScraper(object):
         page.decompose()
         return doc
 
-#TODO: remove links internal to a page (i.e. ugly # url fragments) 
-
+    def build_filepath(self,title):
+        now = datetime.now()
+        filename = "{}.{}-{}-{}-{}:{}.json".format(title,now.year,now.month,now.day,now.hour,now.minute) 
+        return os.path.join(self.save_dir, filename)
+        
     # Saves html to file
     @asyncio.coroutine
     def save_doc(self,doc,title):
-        now = datetime.now()
-        filename = "{}.{}-{}-{}-{}:{}.json".format(title,now.year,now.month,now.day,now.hour,now.minute) 
-        path = os.path.join(self.save_dir, filename)
-        f = yield from aiofiles.open(path, 'wt')
+        filepath = self.build_filepath(title)
+        f = yield from aiofiles.open(filepath, 'wt')
         try:
             yield from f.write(json.dumps(doc))
         finally:
@@ -48,7 +52,7 @@ class WikiScraper(object):
         doc = self.parse(html)
         doc['url'] = url
         print("Parsed: " + doc['title'])
-        asyncio.Task(self.save_doc(doc,doc['title']))
-        wikilink_urls = [urllib.parse.urljoin(WP_ARTICLE_BASE, topic) for topic in doc['wikilinks']]
+        asyncio.Task(self.save_doc(doc['wikilinks'],doc['title']))
+        wikilink_urls = [WP_ARTICLE_BASE + topic for topic in doc['wikilinks']]
         return (True, wikilink_urls)
 
