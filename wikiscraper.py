@@ -25,7 +25,6 @@ class WikiScraper(object):
         doc['content'] = page.find(id='mw-content-text').get_text()
         links = page.find(id='mw-content-text').find_all('a')
         def filter_links(links):
-            #TODO: use urllib.parse for extracting topic. Also handle fragments somehow
             for link in links:
                 if link['href'].startswith('/wiki/') and 'class' not in link.attrs:
                     yield link['href'].split('/')[-1]
@@ -49,10 +48,16 @@ class WikiScraper(object):
             yield from f.close()
             
     def process(self,url,html):
-        doc = self.parse(html)
-        doc['url'] = url
-        print("Parsed: " + doc['title'])
-        asyncio.Task(self.save_doc(doc['wikilinks'],doc['title']))
-        wikilink_urls = [WP_ARTICLE_BASE + topic for topic in doc['wikilinks']]
-        return (True, wikilink_urls)
+        success = False
+        wikilink_urls = []
+        try:
+            doc = self.parse(html)
+            doc['url'] = url
+            print("Parsed: " + doc['title'])
+            asyncio.Task(self.save_doc(doc['wikilinks'],doc['title']))
+            wikilink_urls = [WP_ARTICLE_BASE + topic for topic in doc['wikilinks']]
+            success = True
+        except Exception:
+            print("Failure parsing: " + url)
+        return (success, wikilink_urls)
 
