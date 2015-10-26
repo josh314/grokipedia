@@ -19,7 +19,7 @@ urls = ["http://www.wikipedia.org/wiki/" + t for t in topics]
 
 loop = asyncio.get_event_loop()
 #loop.set_debug(True)
-cr = Crawler(loop, WikiScraper(loop, save_dir="tmp"))
+cr = Crawler(loop, WikiScraper(loop, save_dir="tmp"), traversal="depth-first")
 cr.launch(urls)
 loop.close()
 
