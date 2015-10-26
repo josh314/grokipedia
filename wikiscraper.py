@@ -54,7 +54,7 @@ class WikiScraper(object):
             doc = self.parse(html)
             doc['url'] = url
             print("Parsed: " + doc['title'])
-            asyncio.Task(self.save_doc(doc['wikilinks'],doc['title']))
+            self.loop.create_task(self.save_doc(doc['wikilinks'],doc['title']))
             wikilink_urls = [WP_ARTICLE_BASE + topic for topic in doc['wikilinks']]
             success = True
         except Exception:
