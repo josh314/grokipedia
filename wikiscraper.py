@@ -7,10 +7,43 @@ import asyncio
 from bs4 import BeautifulSoup
 import aiofiles
 
-WP_ARTICLE_BASE = 'http://www.wikipedia.org/wiki/'
+WP_ARTICLE_BASE = 'https://en.wikipedia.org/wiki/'
+
+def wikiurl(title):
+    return WP_ARTICLE_BASE + title
+
 
 def normalize(string):#Remove diacritics and whatevs
     return "".join(ch.lower() for ch in unicodedata.normalize('NFD', string) if not unicodedata.combining(ch))
+
+def is_wikilink(url):
+    return url.startswith('/wiki/') or url.startswith(WP_ARTICLE_BASE)
+
+def is_article(title):
+    """\
+    Checks if the title is for an article or a special page. The title is
+    part of the absolute url:
+
+    http://www.wikipedia.org/wiki/TITLE
+
+    Special pages have titles like this: NAMESPACE:SUBTITLE. For example, 
+    'Help:Abbreviations' or 'Template_talk:Nobel_prizes'. When a colon appears 
+    in an article title, it is followed by an underscore (which represents 
+    a space), e.g. 'Terminator_2:_Judgment_Day'. Also, initial colons in a 
+    title are ignored.
+    """
+    res = True
+    parts = title.split(":")
+    if len(parts) > 1 and parts[0] and not parts[1].startswith("_"):
+        res = False
+    return res
+
+# Filters list of link Tags to the urls for WP articles 
+def article_urls(links):
+    for link in links:
+        url = link['href']
+        if is_wikilink(url) and is_article(url):
+            yield url
 
 class WikiScraper(object):
     def __init__(self, loop, save_dir='.'):
@@ -21,14 +54,11 @@ class WikiScraper(object):
         doc = {}
         page = BeautifulSoup(html)
         doc['title'] = page.find(id='firstHeading').get_text()
-        doc['categories'] = [ li.a['href'].split('/')[2] for li in page.find(id='mw-normal-catlinks').find_all('li') ]
-        doc['content'] = page.find(id='mw-content-text').get_text()
-        links = page.find(id='mw-content-text').find_all('a')
-        def filter_links(links):
-            for link in links:
-                if link['href'].startswith('/wiki/') and 'class' not in link.attrs:
-                    yield link['href'].split('/')[-1]
-        doc['wikilinks'] = [link for link in filter_links(links)]
+        content = page.find(id='mw-content-text')
+        links = content.find_all('a')
+        
+        doc['wikilinks'] = [url.split("/wiki/")[1] for url in article_urls(links)]
+        doc['content'] = content.get_text()
         page.decompose()
         return doc
 
@@ -54,7 +84,7 @@ class WikiScraper(object):
             doc = self.parse(html)
             doc['url'] = url
             print("Parsed: " + doc['title'])
-            self.loop.create_task(self.save_doc(doc['wikilinks'],doc['title']))
+            self.loop.create_task(self.save_doc(doc['content'],doc['title']))
             wikilink_urls = [WP_ARTICLE_BASE + topic for topic in doc['wikilinks']]
             success = True
         except Exception:
